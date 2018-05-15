@@ -1,0 +1,112 @@
+---
+
+- hosts: testbed
+  tasks: #include testbed role
+  - name: Install Chocolatey
+    win_shell: |
+      Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+  # - name: Install python 2.7.13
+  #   win_chocolatey:
+  #     name: python2
+  #     version: 2.7.13
+  #     state: present
+
+  # - name: Install feature Windows-Containers
+  #   win_feature:
+  #     name: 'Containers'
+  #     state: present
+
+  # - name: Install feature NET-Framework-Features
+  #   win_feature:
+  #     name: 'NET-Framework-Features'
+  #     state: present
+
+  # - name: Install feature Hyper-V
+  #   win_feature:
+  #     name: 'Hyper-V'
+  #     include_management_tools: True
+  #     state: present
+
+  # - name: Install DockerProvider
+  #   win_psmodule:
+  #     name: DockerProvider
+
+  # - name: Reboot the system
+  #   win_reboot:
+  #     test_command: powershell.exe 'Get-WindowsFeature'
+  #     pre_reboot_delay: 15
+  #     post_reboot_delay: 15
+  #   tags:
+  #     - skip_lint
+
+  # - name: Wait for reconnection
+  #   wait_for_connection:
+
+  # - name: Install Docker-EE
+  #   win_shell: "Install-Package Docker -ProviderName DockerProvider -Force"
+
+  # we use hardcoded iis tag because of this issue: https://github.com/Microsoft/iis-docker/issues/47
+  # - name: Pull docker images
+  #   win_shell: "docker pull {{ item }}"
+  #   with_items:
+  #     - microsoft/nanoserver
+  #     - microsoft/windowsservercore
+  #     - microsoft/iis:windowsservercore-10.0.14393.1358
+
+  # - name: Install MS Visuall C++ Redist 14
+  #   win_chocolatey:
+  #     name: vcredist140
+  #     state: present
+
+  # - name: Disable Windows Firewall
+  #   win_firewall:
+  #     profiles:
+  #       - Domain
+  #       - Private
+  #     state: disabled
+
+  # - name: Stop Docker
+  #   win_service:
+  #     name: docker
+  #     state: stopped
+
+  # - name: Remove container networks
+  #   win_shell: |
+  #     Get-NetNat | Remove-NetNat -Confirm:$false
+  #     Get-ContainerNetwork | Remove-ContainerNetwork -Force
+
+  # - name: Enable testsigning
+  #   win_shell: |
+  #     Bcdedit.exe -set TESTSIGNING ON
+
+   # install artifacts
+  - name: Make artifacts subdir
+    win_file:
+      path: 'C:\Artifacts'
+      state: directory
+
+  - name: Copy artifacts to testbed
+    win_copy:
+      src: '/mnt/c/jw/contrail-windows-deployer/Artifacts/'
+      dest: 'C:\Artifacts\'
+  # Copy install scripts and install components (tag tasks so one can install components seperately)
+  # try with contrail-windows-ci
+  - name: Install git with chocolatey
+    win_chocolatey:
+      name: git
+      state: present
+
+  - name: Make contrail-windows-ci dir
+    win_file:
+      path: 'C:\contrail-windows-ci\'
+      state: directory
+
+  - name: Ensure directory for contrail-windows-ci is empty
+    win_shell: 'Remove-Item -Recurse -Force C:\contrail-windows-ci'
+
+  - name: Clone contrail-windows-ci repository
+    win_command: 'git clone -b win-dep https://github.com/Juniper/contrail-windows-ci.git C:\contrail-windows-ci'
+
+  - name: Install Artifacts
+    win_shell: 'C:\contrail-windows-ci\CIScripts\Deploy\LocalDeployment.ps1'
